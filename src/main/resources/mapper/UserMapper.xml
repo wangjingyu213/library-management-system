@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.library.mapper.UserMapper">
+
+    <resultMap id="UserResultMap" type="com.example.library.entity.User">
+        <id property="id" column="id"/>
+        <result property="username" column="username"/>
+        <result property="passwordHash" column="password_hash"/>
+        <result property="displayName" column="display_name"/>
+        <result property="enabled" column="enabled"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <select id="findById" resultMap="UserResultMap">
+        select id, username, password_hash, display_name, enabled, created_at from users where id = #{id}
+    </select>
+
+    <select id="findByUsername" resultMap="UserResultMap">
+        select id, username, password_hash, display_name, enabled, created_at from users where username = #{username}
+    </select>
+
+    <select id="findAll" resultMap="UserResultMap">
+        select id, username, password_hash, display_name, enabled, created_at from users order by id desc
+    </select>
+
+    <select id="findRolesByUserId" resultType="string">
+        select r.code from roles r inner join user_roles ur on ur.role_id = r.id where ur.user_id = #{userId} order by r.id
+    </select>
+
+    <select id="findPermissionsByUserId" resultType="string">
+        select distinct p.code
+        from permissions p
+        inner join role_permissions rp on rp.permission_id = p.id
+        inner join user_roles ur on ur.role_id = rp.role_id
+        where ur.user_id = #{userId}
+        order by p.code
+    </select>
+
+    <select id="findRoleIdByCode" resultType="long">
+        select id from roles where code = #{code}
+    </select>
+
+    <insert id="insert" parameterType="com.example.library.entity.User" useGeneratedKeys="true" keyProperty="id">
+        insert into users (username, password_hash, display_name, enabled)
+        values (#{username}, #{passwordHash}, #{displayName}, #{enabled})
+    </insert>
+
+    <update id="update" parameterType="com.example.library.entity.User">
+        update users
+        set username = #{username},
+            <if test="passwordHash != null">password_hash = #{passwordHash},</if>
+            display_name = #{displayName},
+            enabled = #{enabled}
+        where id = #{id}
+    </update>
+
+    <delete id="deleteRoles">
+        delete from user_roles where user_id = #{userId}
+    </delete>
+
+    <insert id="insertRole">
+        insert into user_roles (user_id, role_id) values (#{userId}, #{roleId})
+    </insert>
+
+    <delete id="deleteById">
+        delete from users where id = #{id}
+    </delete>
+
+    <select id="countByUsername" resultType="int">
+        select count(1) from users where username = #{username}
+        <if test="excludeId != null">and id != #{excludeId}</if>
+    </select>
+</mapper>

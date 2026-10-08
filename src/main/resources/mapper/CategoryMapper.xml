@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.library.mapper.CategoryMapper">
+    <resultMap id="CategoryResultMap" type="com.example.library.entity.Category">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="description" column="description"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <select id="findAll" resultMap="CategoryResultMap">
+        select id, name, description, created_at from categories order by name
+    </select>
+
+    <select id="findById" resultMap="CategoryResultMap">
+        select id, name, description, created_at from categories where id = #{id}
+    </select>
+
+    <insert id="insert" parameterType="com.example.library.entity.Category" useGeneratedKeys="true" keyProperty="id">
+        insert into categories (name, description) values (#{name}, #{description})
+    </insert>
+
+    <update id="update" parameterType="com.example.library.entity.Category">
+        update categories set name = #{name}, description = #{description} where id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        delete from categories where id = #{id}
+    </delete>
+
+    <select id="countByName" resultType="int">
+        select count(1) from categories where name = #{name}
+        <if test="excludeId != null">and id != #{excludeId}</if>
+    </select>
+
+    <select id="countBooks" resultType="int">
+        select count(1) from books where category_id = #{id}
+    </select>
+</mapper>

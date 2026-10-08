@@ -1,0 +1,123 @@
+openapi: 3.0.3
+info:
+  title: Library Management API
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+paths:
+  /api/auth/login:
+    post:
+      summary: Login and receive JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                  example: admin
+                password:
+                  type: string
+                  example: admin123
+      responses:
+        "200":
+          description: Login succeeded
+  /api/books:
+    get:
+      summary: List books
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: keyword
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Book list
+    post:
+      summary: Create book
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookRequest"
+      responses:
+        "201":
+          description: Book created
+  /api/books/{id}:
+    get:
+      summary: Get book detail
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "200":
+          description: Book detail
+    put:
+      summary: Update book
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookRequest"
+      responses:
+        "200":
+          description: Book updated
+    delete:
+      summary: Delete book
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "204":
+          description: Book deleted
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    BookId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+  schemas:
+    BookRequest:
+      type: object
+      required: [title, author, totalCopies, availableCopies]
+      properties:
+        title:
+          type: string
+        author:
+          type: string
+        isbn:
+          type: string
+        publisher:
+          type: string
+        publishYear:
+          type: integer
+        totalCopies:
+          type: integer
+          minimum: 0
+        availableCopies:
+          type: integer
+          minimum: 0
+

@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.library.mapper.BookMapper">
+
+    <resultMap id="BookResultMap" type="com.example.library.entity.Book">
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="author" column="author"/>
+        <result property="isbn" column="isbn"/>
+        <result property="publisher" column="publisher"/>
+        <result property="publishYear" column="publish_year"/>
+        <result property="totalCopies" column="total_copies"/>
+        <result property="availableCopies" column="available_copies"/>
+        <result property="categoryId" column="category_id"/>
+        <result property="categoryName" column="category_name"/>
+        <result property="shelfLocation" column="shelf_location"/>
+        <result property="summary" column="summary"/>
+        <result property="coverUrl" column="cover_url"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <sql id="BookColumns">
+        b.id, b.title, b.author, b.isbn, b.publisher, b.publish_year, b.total_copies, b.available_copies,
+        b.category_id, c.name as category_name, b.shelf_location, b.summary, b.cover_url, b.created_at, b.updated_at
+    </sql>
+
+    <select id="findAll" resultMap="BookResultMap">
+        select <include refid="BookColumns"/>
+        from books b
+        left join categories c on c.id = b.category_id
+        <where>
+            <if test="keyword != null">
+                and (b.title like #{keyword}
+                or b.author like #{keyword}
+                or b.isbn like #{keyword}
+                or b.publisher like #{keyword}
+                or b.shelf_location like #{keyword}
+                or c.name like #{keyword})
+            </if>
+            <if test="categoryId != null">
+                and b.category_id = #{categoryId}
+            </if>
+            <if test="stockStatus == 'available'">
+                and b.available_copies &gt; 0
+            </if>
+            <if test="stockStatus == 'low'">
+                and b.available_copies &gt; 0 and b.available_copies &lt;= 1
+            </if>
+            <if test="stockStatus == 'empty'">
+                and b.available_copies = 0
+            </if>
+        </where>
+        order by b.id desc
+    </select>
+
+    <select id="findById" resultMap="BookResultMap">
+        select <include refid="BookColumns"/>
+        from books b
+        left join categories c on c.id = b.category_id
+        where b.id = #{id}
+    </select>
+
+    <insert id="insert" parameterType="com.example.library.entity.Book" useGeneratedKeys="true" keyProperty="id">
+        insert into books (title, author, isbn, publisher, publish_year, total_copies, available_copies, category_id, shelf_location, summary, cover_url)
+        values (#{title}, #{author}, #{isbn}, #{publisher}, #{publishYear}, #{totalCopies}, #{availableCopies}, #{categoryId}, #{shelfLocation}, #{summary}, #{coverUrl})
+    </insert>
+
+    <update id="update" parameterType="com.example.library.entity.Book">
+        update books
+        set title = #{title},
+            author = #{author},
+            isbn = #{isbn},
+            publisher = #{publisher},
+            publish_year = #{publishYear},
+            total_copies = #{totalCopies},
+            available_copies = #{availableCopies},
+            category_id = #{categoryId},
+            shelf_location = #{shelfLocation},
+            summary = #{summary},
+            cover_url = #{coverUrl}
+        where id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        delete from books where id = #{id}
+    </delete>
+
+    <select id="countByIsbn" resultType="int">
+        select count(1)
+        from books
+        where isbn = #{isbn}
+        <if test="excludeId != null">
+            and id != #{excludeId}
+        </if>
+    </select>
+
+    <update id="decreaseAvailable">
+        update books
+        set available_copies = available_copies - 1
+        where id = #{id} and available_copies &gt; 0
+    </update>
+
+    <update id="increaseAvailable">
+        update books
+        set available_copies = available_copies + 1
+        where id = #{id} and available_copies &lt; total_copies
+    </update>
+</mapper>

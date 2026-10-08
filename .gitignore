@@ -1,0 +1,13 @@
+target/
+.idea/
+*.iml
+.env
+*.log
+frontend/node_modules/
+frontend/dist/
+uploads/
+report-render/
+report-render-v2/
+*.doc
+*.docx
+*.zip
