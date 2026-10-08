@@ -19,7 +19,7 @@
 - 管理员：`admin / admin123`
 - 读者：`reader / reader123`
 
-MySQL 默认连接配置：`root / 123456`，数据库名：`library_management`。
+MySQL 数据库名为 `library_management`。数据库用户名和密码通过环境变量配置，提交代码中不保存真实密码。
 
 ## 初始化或升级数据库
 
@@ -29,11 +29,11 @@ MySQL 默认连接配置：`root / 123456`，数据库名：`library_management`
 source D:/个人项目/library-management-system/src/main/resources/schema.sql;
 ```
 
-如果在 PowerShell 中执行，注意使用 UTF-8，避免中文乱码：
+如果在 PowerShell 中执行，注意使用 UTF-8，避免中文乱码。请将下面的密码占位符替换为本机 MySQL 密码：
 
 ```powershell
 Copy-Item D:/个人项目/library-management-system/src/main/resources/schema.sql D:/library_schema.sql -Force
-cmd.exe /d /c "mysql.exe --default-character-set=utf8mb4 -uroot -p123456 < D:\library_schema.sql"
+cmd.exe /d /c "mysql.exe --default-character-set=utf8mb4 -uroot -p你的MySQL密码 < D:\library_schema.sql"
 ```
 
 ## 运行后端
