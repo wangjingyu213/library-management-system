@@ -51,6 +51,26 @@
             <div class="panel recent-panel"><div class="panel-heading"><div><p class="section-kicker">Recent activity</p><h2>最近借阅动态</h2></div><button class="text-button" @click="activeTab='borrows'">全部记录 →</button></div><div class="activity-list"><div v-for="r in records.slice(0, 5)" :key="r.id" class="activity-item"><span class="activity-avatar">{{ (r.displayName || '读').slice(0, 1) }}</span><span><b>{{ r.displayName }} 借阅了《{{ r.bookTitle }}》</b><small>{{ r.borrowDate }} · {{ recordText(r) }}</small></span><span :class="['badge', recordClass(r)]">{{ recordText(r) }}</span></div><p v-if="!records.length" class="empty">暂无借阅动态</p></div></div>
           </section>
 
+          <section v-if="activeTab==='ai'" class="ai-layout">
+            <div class="panel ai-shell">
+              <div class="panel-heading"><div><p class="section-kicker">AI assistant</p><h2>AI 学习搭子</h2></div><span class="ai-status"><i></i>馆藏问答</span></div>
+              <div class="ai-notice"><span class="note-icon">i</span><span>回答会参考当前馆藏资料，适合查询图书、库存和阅读建议。请勿输入密码、密钥等敏感信息，馆藏结果请以书库页面为准。</span></div>
+              <div class="chat-history" aria-live="polite">
+                <div v-for="(item, index) in aiMessages" :key="`${item.role}-${index}`" :class="['chat-message', item.role]">
+                  <span class="chat-avatar">{{ item.role === 'user' ? (user.displayName || user.username || '我').slice(0, 1) : 'AI' }}</span>
+                  <div class="chat-bubble"><small>{{ item.role === 'user' ? '我' : 'AI 学习搭子' }}</small><p>{{ item.content }}</p></div>
+                </div>
+                <div v-if="aiLoading" class="chat-message assistant"><span class="chat-avatar">AI</span><div class="chat-bubble typing"><small>AI 学习搭子</small><p>正在整理馆藏资料并生成回答<span class="typing-dots">...</span></p></div></div>
+              </div>
+              <div class="quick-prompts"><span>试试这样问：</span><button v-for="prompt in aiQuickPrompts" :key="prompt" class="ghost" type="button" @click="submitAiQuestion(prompt)" :disabled="aiLoading">{{ prompt }}</button></div>
+              <form class="ai-composer" @submit.prevent="submitAiQuestion()">
+                <textarea v-model="aiQuestion" maxlength="1000" rows="3" placeholder="例如：帮我推荐适合入门学习 Java 的馆藏图书" @keydown.enter.exact.prevent="submitAiQuestion()"></textarea>
+                <div class="ai-composer-footer"><small>{{ aiQuestion.length }}/1000 · Enter 发送，Shift + Enter 换行</small><button :disabled="aiLoading || !aiQuestion.trim()">{{ aiLoading ? '生成中...' : '发送问题 →' }}</button></div>
+              </form>
+            </div>
+            <aside class="panel ai-guide"><div class="panel-heading"><div><p class="section-kicker">How to use</p><h2>使用建议</h2></div></div><div class="ai-guide-list"><div><b>查馆藏</b><p>询问某类图书、作者或当前可借库存。</p></div><div><b>做推荐</b><p>说明学习目标和难度，获取基于馆藏的阅读建议。</p></div><div><b>问学习</b><p>让 AI 解释概念、整理学习计划或总结重点。</p></div></div><p class="ai-footnote">当前会话不会保存到数据库。模型回答可能存在偏差，请人工核对关键结论。</p></aside>
+          </section>
+
           <section v-if="activeTab==='books'" class="grid books-layout">
             <div class="panel"><div class="panel-heading"><div><p class="section-kicker">Collection</p><h2>馆藏目录 <span class="count-label">{{ books.length }} 本</span></h2></div><span class="panel-caption">支持封面和库存维护</span></div><div class="tools"><label class="search-field"><span>⌕</span><input v-model="bookQuery.keyword" placeholder="搜索书名、作者、ISBN、出版社或位置" @keyup.enter="loadBooks" /></label><select v-model="bookQuery.categoryId" @change="loadBooks"><option value="">全部分类</option><option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option></select><select v-model="bookQuery.stockStatus" @change="loadBooks"><option value="">全部库存</option><option value="available">可借</option><option value="low">库存紧张</option><option value="empty">已借完</option></select><button @click="loadBooks">查询</button></div><div class="book-grid"><article v-for="book in books" :key="book.id" class="book-card"><img :src="coverOf(book)" alt="图书封面" /><div class="book-body"><div class="book-meta-top"><span :class="['badge', statusOf(book).className]">{{ statusOf(book).text }}</span><span class="book-id">#{{ book.id }}</span></div><h3>{{ book.title }}</h3><p class="book-author">{{ book.author }}</p><p class="book-location">{{ book.categoryName || '未分类' }} <span>·</span> {{ book.shelfLocation || '未设置位置' }}</p><div class="stock"><b>{{ book.availableCopies }}</b><span>/ {{ book.totalCopies }} 可借</span></div><p class="summary">{{ book.summary || '暂无简介' }}</p><div class="row wrap book-actions"><button class="ghost" @click="editBook(book)" :disabled="!canWrite">编辑</button><button @click="quickBorrow(book)" :disabled="book.availableCopies<=0">借阅</button><button class="danger" @click="removeBook(book)" :disabled="!canDelete">删除</button></div></div></article><p v-if="!books.length" class="empty empty-card">没有符合条件的图书</p></div></div>
             <div class="panel sticky form-panel"><div class="panel-heading"><div><p class="section-kicker">Book editor</p><h2>{{ bookForm.id ? '编辑图书' : '新增图书' }}</h2></div><span class="panel-caption">{{ canWrite ? '可编辑' : '只读模式' }}</span></div><div v-if="!canWrite" class="permission-note">当前账号只有查看和借阅权限。</div><form class="stack" @submit.prevent="saveBook"><label>书名<input v-model="bookForm.title" required :disabled="!canWrite" /></label><label>作者<input v-model="bookForm.author" required :disabled="!canWrite" /></label><div class="form-grid"><label>ISBN<input v-model="bookForm.isbn" :disabled="!canWrite" /></label><label>出版年份<input v-model.number="bookForm.publishYear" type="number" :disabled="!canWrite" /></label></div><label>出版社<input v-model="bookForm.publisher" :disabled="!canWrite" /></label><div class="form-grid"><label>分类<select v-model="bookForm.categoryId" :disabled="!canWrite"><option :value="null">未分类</option><option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option></select></label><label>馆藏位置<input v-model="bookForm.shelfLocation" :disabled="!canWrite" /></label></div><div class="form-grid"><label>馆藏<input v-model.number="bookForm.totalCopies" type="number" min="0" :disabled="!canWrite" /></label><label>可借<input v-model.number="bookForm.availableCopies" type="number" min="0" :disabled="!canWrite" /></label></div><label>简介<textarea v-model="bookForm.summary" rows="3" :disabled="!canWrite"></textarea></label><label>封面上传<input type="file" accept="image/*" @change="handleCoverUpload" :disabled="!canWrite" /></label><img v-if="bookForm.coverUrl" class="cover-preview" :src="bookForm.coverUrl" alt="封面预览" /><div class="row form-actions"><button :disabled="!canWrite">保存图书</button><button type="button" class="ghost" @click="resetBookForm">清空</button></div></form></div>
@@ -71,7 +91,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { borrowBook, createBook, createCategory, createUser, deleteBook, deleteCategory, deleteUser, getStoredUser, listBooks, listBorrowRecords, listCategories, listUsers, login, logout, returnBook, updateBook, updateCategory, updateUser, uploadCover } from './api'
+import { askAi, borrowBook, createBook, createCategory, createUser, deleteBook, deleteCategory, deleteUser, getStoredUser, listBooks, listBorrowRecords, listCategories, listUsers, login, logout, returnBook, updateBook, updateCategory, updateUser, uploadCover } from './api'
 
 const user = ref(getStoredUser())
 const activeTab = ref('dashboard')
@@ -87,11 +107,15 @@ const borrowForm = reactive({ bookId: null, userId: null, dueDate: dateAfter(30)
 const bookForm = reactive(emptyBook())
 const categoryForm = reactive({ id: null, name: '', description: '' })
 const userForm = reactive(emptyUser())
-const tabs = [{key:'dashboard',label:'工作台',icon:'总'}, {key:'books',label:'书库管理',icon:'书'}, {key:'borrows',label:'借阅记录',icon:'借'}, {key:'categories',label:'图书分类',icon:'类'}, {key:'users',label:'用户管理',icon:'人', admin:true}]
+const aiQuestion = ref('')
+const aiLoading = ref(false)
+const aiMessages = ref([{ role: 'assistant', content: '你好，我是 AI 学习搭子。你可以问我馆藏查询、阅读推荐、借阅规则或学习规划。' }])
+const aiQuickPrompts = ['推荐适合 Java 入门的图书', '当前有哪些库存紧张的书？', '帮我制定一周阅读计划']
+const tabs = [{key:'dashboard',label:'工作台',icon:'总'}, {key:'books',label:'书库管理',icon:'书'}, {key:'borrows',label:'借阅记录',icon:'借'}, {key:'categories',label:'图书分类',icon:'类'}, {key:'ai',label:'AI 学习搭子',icon:'AI'}, {key:'users',label:'用户管理',icon:'人', admin:true}]
 const visibleTabs = computed(() => tabs.filter(t => !t.admin || canManageUsers.value))
 const currentTab = computed(() => tabs.find(t => t.key === activeTab.value) || tabs[0])
-const pageTitle = computed(() => ({dashboard:'运营总览',books:'书库与封面维护',borrows:'借阅流转与逾期提醒',categories:'分类体系维护',users:'账号与角色管理'}[activeTab.value]))
-const pageDescription = computed(() => ({dashboard:'掌握馆藏状态、借阅动态和需要跟进的重点事项。',books:'维护书目、库存位置与图书封面，保持馆藏信息准确。',borrows:'登记借阅和归还，集中处理逾期记录。',categories:'建立统一的图书分类体系，提升检索与管理效率。',users:'管理系统账号、角色和访问状态。'}[activeTab.value]))
+const pageTitle = computed(() => ({dashboard:'运营总览',books:'书库与封面维护',borrows:'借阅流转与逾期提醒',categories:'分类体系维护',ai:'AI 智能问答',users:'账号与角色管理'}[activeTab.value]))
+const pageDescription = computed(() => ({dashboard:'掌握馆藏状态、借阅动态和需要跟进的重点事项。',books:'维护书目、库存位置与图书封面，保持馆藏信息准确。',borrows:'登记借阅和归还，集中处理逾期记录。',categories:'建立统一的图书分类体系，提升检索与管理效率。',ai:'结合当前馆藏资料，辅助完成图书查询与学习规划。',users:'管理系统账号、角色和访问状态。'}[activeTab.value]))
 const canWrite = computed(() => user.value?.roles?.some(r => r === 'ADMIN' || r === 'LIBRARIAN'))
 const canDelete = computed(() => user.value?.roles?.includes('ADMIN'))
 const canManageUsers = computed(() => user.value?.roles?.includes('ADMIN'))
@@ -115,6 +139,22 @@ async function removeBook(b){ if(confirm(`删除《${b.title}》？`)) await run
 async function handleCoverUpload(e){ const file=e.target.files?.[0]; if(!file)return; await run(async()=>{ const res=await uploadCover(file); bookForm.coverUrl=res.url }, '封面上传成功') }
 async function quickBorrow(book){ Object.assign(borrowForm,{bookId:book.id,userId:canManageUsers.value ? (users.value[0]?.id || null) : null,dueDate:dateAfter(30),remark:''}); activeTab.value='borrows'; borrowPanel.value=true }
 function openBorrowPanel(){ borrowPanel.value=!borrowPanel.value }
+async function submitAiQuestion(question = aiQuestion.value){
+  const content = String(question || '').trim()
+  if(!content || aiLoading.value) return
+  aiMessages.value.push({ role: 'user', content })
+  aiQuestion.value = ''
+  aiLoading.value = true
+  try {
+    const response = await askAi(content)
+    aiMessages.value.push({ role: 'assistant', content: response.answer })
+  } catch (e) {
+    const error = e.response?.data?.message || e.message || 'AI 服务暂时不可用'
+    aiMessages.value.push({ role: 'assistant', content: `暂时无法回答：${error}` })
+  } finally {
+    aiLoading.value = false
+  }
+}
 async function saveBorrow(){ await run(async()=>{ await borrowBook({...borrowForm}); borrowPanel.value=false; await Promise.all([loadBooks(),loadRecords()]) }, '借阅成功') }
 async function returnRecord(r){ await run(async()=>{ await returnBook(r.id,{remark:'正常归还'}); await Promise.all([loadBooks(),loadRecords()]) }, '归还成功') }
 async function saveCategory(){ await run(async()=>{ categoryForm.id ? await updateCategory(categoryForm.id,categoryForm) : await createCategory(categoryForm); resetCategoryForm(); await loadCategories() }, '分类已保存') }

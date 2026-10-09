@@ -22,6 +22,10 @@ mybatis:
 app:
   cors:
     allowed-origins: http://localhost:5173
+  ai:
+    base-url: https://api.openai.com/v1
+    api-key: ${AI_API_KEY:}
+    model: gpt-4o-mini
   jwt:
     secret: 请替换为长度足够的随机密钥
     expiration-minutes: 120

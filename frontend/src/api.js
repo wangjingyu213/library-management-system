@@ -105,3 +105,8 @@ export async function uploadCover(file) {
   })
   return data
 }
+
+export async function askAi(question) {
+  const { data } = await api.post('/ai/chat', { question })
+  return data
+}

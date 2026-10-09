@@ -51,6 +51,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/ai/**").hasAnyRole("ADMIN", "LIBRARIAN", "READER")
                         .requestMatchers("/api/admin/users/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/books/**", "/api/categories/**", "/api/borrow-records/**").hasAnyRole("ADMIN", "LIBRARIAN", "READER")
                         .requestMatchers("/api/uploads/**").hasAnyRole("ADMIN", "LIBRARIAN")
